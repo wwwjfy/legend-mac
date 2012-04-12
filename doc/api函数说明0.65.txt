@@ -1,0 +1,324 @@
+
+
+
+         主程序给Lua提供的接口API说明
+              
+
+
+
+1. 主程序引擎架构
+    主程序用SDL实现了一个最基本的跨平台的图形引擎，lua可以调用这些函数进行游戏编程。
+    
+    引擎特点：
+
+    1. 使用SDL库，包括SDL_image, SDL_mixer, SDL_ttf, smpeg。支持16/24/32色，支持midi/mp3等音乐格式,
+       支持加载bmp/png/jpg等图片格式
+
+    2. 窗口可自定义大小。但不得小于320*240
+
+    3. 支持加载png位图文件以及含有png文件的idx/grp贴图文件。
+
+    4. 显示贴图采用缓存结构，使用者无需关心如何加载。这样既保持一定效率，又减小对内存的使用。
+
+    5. 只采用一个显示表面，所有的图形操作都在这一个表面上进行。
+
+
+2. Lua脚本
+
+   目前使用lua5.1.2版本，运行时主程序自动调用脚本script\jymain.lua。并运行其中的JY_Main()函数。
+
+   游戏编写者从这里开始编写游戏函数。
+
+
+3. API函数列表：
+    以下函数都是主程序引擎提供的可以在lua中调用的函数：
+
+    注意：对这些API没有做更多的参数的检查工作，因此要确保输入的参数是合理的。
+          否则程序可能会出错，也可能什么都不做。
+
+
+lib.Debug(str)           
+    在主程序目录下的debug.txt文件中输出调试字符串
+
+lib.EnableKeyRepeat(delay,interval)  新增
+    设置键盘重复率。delay为第一个重复的延迟毫秒数，interval为多少毫秒重复一次。
+    ESC, RETURN 和SPACE键已经取消重复。一直按下也只认为是按下一次。
+
+lib.GetKey()
+    得到当前按键键码。键码定义参见SDL文档
+    
+        此函数处理键盘缓冲区和键盘重复率，返回的是从上次调用以来曾经按下的键。
+    并且只处理按下一个键的情况。因此如果需要清除键盘缓冲区，需要先调用一次此函数。
+
+lib.GetTime
+    返回开机到当前的毫秒数
+
+lib.Delay(t)
+    延时t毫秒
+ 
+
+lib.CharSet(str,flag)   修改
+    返回把str转换后的字符串
+
+    flag=0   Big5 ---> GBK   
+        =1   GBK  ---> Big5
+        =2   Big5 --> Unicode
+        =3   GBK  --> Unicode
+
+lib.SetClip(x1,y1,x2,y2)
+    设置裁剪窗口。设置以后所有对表面的绘图操作都只影响(x1,y1)-(x2,y2)的矩形框内部。
+    如果x1,y1,x2,y2均为0，则裁剪窗口为整个表面。
+
+    本函数在内部维护一个裁剪窗口列表。ShowScreen函数使用此列表来更新实际的屏幕显示。
+    每调用一次，裁剪窗口数量+1。最多为20个。
+    当x1,y1,x2,y2均为0时，清除全部裁剪窗口。
+
+lib.FillColor(x1,y1,x2,y2,color)
+    用颜色color来填充表面的矩形(x1,y1)-(x2,y1)，color为32位RGB。从最高字节依次为0,R,G,B。
+    如果x1,y1,x2,y2均为0，则填充整个表面。
+       
+lib.Background(x1,y1,x2,y2,Bright)
+    把表面内矩形(x1,y1)-(x2,y2)内所有点的亮度降低为Bright倍。
+    Bright取值为0-256，0表示全黑，256表示亮度不变。
+
+lib.DrawRect(x1,y1,x2,y2,color)
+    绘制矩形(x1,y1)-(x2,y2)，线框为单个像素，颜色为color
+
+lib.DrawStr(x,y,str,color,size,fontname,charset,OScharset)  修改
+    在(x,y)位置写字符串str。
+    color:字体颜色，size:字体像素大小，fontname字体名字
+    charset: 字符串字符集，0 GBK, 1 BIG5
+    OScharset: 0 显示简体  1 显示繁体
+
+    此函数直接显示阴影字。在lua中不用处理阴影字了。这样可以提高字符串显示速度
+
+
+lib.ShowSurface(flag)
+    把表面显示到屏幕。
+    flag = 0 显示全部表面  =1 按照SetClip设置的矩形依次显示，如果没有矩形，则不显示
+
+    在调用此函数前，表面上的数据是不会显示的。
+
+
+lib.ShowSlow(t,flag)
+    把表面缓慢显示到屏幕
+    t 为亮度没变化一次的间隔毫秒数。为了16/32位兼容，一共有32阶亮度变化。
+    flag: 0 从暗到亮，1 从亮到暗
+
+lib.PicInit(str)
+    初始化贴图Cache。str为调色板文件。
+    在转换场景前调用，清空所有保存的贴图文件信息
+    第一次调用时需要加载调色板，以后就不需要了，设置str为空字符串即可。
+
+lib.PicLoadFile(idxfilename,grpfilename,id)
+   加载贴图文件信息
+    idxfilename/grpfilename idx/grp文件名
+    id 加载编号，0 - 39 最大可加载40个。如果原来就有，则覆盖原来的。
+
+lib.PicLoadCache(id,picid,x,y,flag,value)
+    加载id所指示的贴图文件中编号为picid/2(为保持兼容，这里依然除2)的贴图到表面的(x,y)坐标。
+    
+    id为lib.PicLoadFile加载的文件的加载编号。
+
+    flag 不同bit代表不同含义，缺省均为0
+       B0    0 考虑偏移xoff，yoff。=1 不考虑偏移量
+            对于贴图文件来说，原有的RLE8编码格式都保存一个偏移量数据，表示绘图时实际的偏移。
+          现在支持新的PNG格式，由于是直接采用png文件保存进grp文件，没有可以保存偏移量的地方。  
+          因此对不需要偏移的贴图，如物品图像，人物头像，直接按照贴图大小保存。加载时设置此位
+          为1即可。
+            对于需要考虑偏移量地方，设置此位为0。而为了处理png中的偏移量。我们假设所有png文件
+          偏移量都在图形正中间，这样如果要载入新的png贴图，必须放大png文件的大小。使偏移点
+          刚好位于图形中间。
+
+       B1    0 , 1 与背景alpla 混合显示, value 为alpha值(0-256), 0表示透明
+          需要考虑Alpha混合时，设置此位为1。
+          注意目前不支持png文件本身中的单个像素的alpha通道，只考虑透明与不透明。
+          这是是单独进行Alpha混合
+           
+       B2            1 全黑
+          该贴图先进行全黑处理，然后再Alpha，只有B1为1时才有意义。
+       B3            1 全白
+          该贴图先进行全黑处理，然后再Alpha，只有B1为1时才有意义。
+
+    value 当flag设置alpha时，为alpha值。
+
+    当flag=0时，flag和value都可以为空。即只需要输入前几个参数即可。
+
+
+
+
+    在正常加载贴图到表面时，flag为0。
+    在战斗中手工选择移动或者战斗位置和人物被击中时，需要特殊的效果，这是就要使用B1,B2,B3。
+    由于lua不支持单独的位或操作，只能简单用加法替代。
+    如：B1，B2设为1，flag=2+4;
+        B1，B3设为1，flag=2+8;
+
+
+lib.GetPicXY(id,picid)   
+    得到贴图大小
+    返回贴图宽,高,x偏移，y偏移
+
+lib.FullScreen()
+    切换全屏和窗口。
+    调用一次，改变一次状态
+
+lib.LoadPicture(filename,x,y) 
+    显示图片文件filename到位置x,y
+    支持的文件扩展名为bmp/png/jpg等
+    若x=-1,y=-1则，显示在屏幕中间
+    
+    函数会在内存中保存上一次加载的图片文件，以加快重复加载的速度。
+    用空文件名调用将会清除占用的内存。
+    
+lib.PlayMIDI(filename) 
+    重复播放MID文件filename。
+    若filename为空字符串，则停止播放当前正在播放的midi
+
+lib.PlayWAV(filename) 
+    播放音效AVI文件filename
+
+lib.PlayMPEG(filename,key)
+    播放mpeg1视频
+    key为停止播放按键的键码。一般设为Esc键
+
+
+lib.LoadMMap(filename1,filename2,filename3,filename4,filename5,xmax,ymax,x,y)
+    加载主地图的5个结构文件*.002。
+    贴图文件依次为earth,surface,building,buildx,buildy
+    xmax,ymax为主地图宽，高。目前均为480
+    x,y 主角坐标
+
+lib.GetMMap(x,y,flag)
+    取主地图结构相应坐标的值
+    flag=0 earth, 1 surface, 2 building, 3 buildx, 4 buildy
+
+lib.DrawMMap(x,y,mypic)
+    在表面绘制主地图。
+    (x,y)  主角坐标
+    mypic 主角贴图编号(注意这里是实际编号，不用除2)
+
+
+lib.UnloadMMap()
+    释放主地图占用内存
+
+
+
+lib.LoadSMap(Sfilename,tempfilename,num,x_max,y_max,Dfilename,d_num1,d_num2)
+    加载场景地图数据S*和D*
+    Sfilename s*文件名
+    tempfilename 保存临时S*的文件名
+    num 场景个数
+    x_max,y_max 场景宽高
+    Dfilename D*文件名
+    d_num1 每个场景几个D数据。应为200
+    d_num1 每个D几个数据。应为11
+
+    这里的文件名只是.grp由于每个场景的数据固定，因此不需要.idx文件
+
+lib.SaveSMap(Sfilename,Dfilename)
+    保存S*和D*
+
+lib.GetS(id,x,y,level)
+    读S*数据
+    id 场景编号
+    x,y 坐标
+    level 层数
+ 
+lib.SetS(id,x,y,level,v)
+    写场景数据v
+
+lib.GetD(Sceneid,id,i)
+   读D*数据
+   sceneid 场景编号
+   id 该场景D编号
+   i 第几个数据
+  
+lib.SetD(Sceneid,id,i,v)
+   写D*数据v
+
+lib.DrawSMap(sceneid,x,y,xoff,yoff,mypic);
+   绘场景地图
+   sceneid 场景编号
+   x,y 主角坐标
+   xoff,yoff 场景中心偏移。
+   mypic 主角贴图*2
+
+lib.LoadWarMap(WarIDXfilename,WarGRPfilename,mapid,num,x_max,y_max);
+   加载战斗地图
+   WarIDXfilename/WarGrpfilename: 战斗地图文件名idx/grp
+   mapid 战斗地图编号
+   num 战斗地图数据层数   应为6
+          0层 地面数据
+          1层 建筑
+          2层 战斗人战斗编号
+          3层 移动时显示可移动的位置
+          4层 命中效果
+          5层 战斗人对应的贴图
+  x_max,x_max   地图大小
+
+  战斗地图只读取两层数据，其余为工作数据区
+
+lib.GetWarMap(x,y,level)
+   取战斗地图数据
+
+lib.SetWarMap(x,y,level,v)
+   存战斗地图数据
+
+lib.CleanWarMap(level,v)
+   给level层战斗数据全部赋值v
+
+lib.DrawWarMap(flag, x, y, v1,v2)
+   绘战斗地图
+
+  flag=0  绘制基本战斗地图
+      =1  显示可移动的路径，(v1,v2)当前移动坐标，白色背景(雪地战斗)
+      =2  显示可移动的路径，(v1,v2)当前移动坐标，黑色背景
+      =3  命中的人物用白色轮廓显示
+      =4  战斗动作动画  v1 战斗人物pic, v2贴图所属的加载文件id, 即lib.PicLoadFile加载的id
+                        v3 武功效果pic
+ 
+  x,y 战斗人坐标
+
+
+
+    以下是处理二进制文件的API，lua本身对二进制文件处理的支持不够，因此编制了下面几个函数
+
+Byte.create(size)
+    创建一个二进制字节数组，size为数组大小。
+
+Byte.loadfile(b,filename,start,length)
+    从文件filename中加载数据到字节数组b中。
+    start 读取位置，从文件开始处的字节数。从0开始。
+    length 要读的字节数
+
+Byte.savefile(b,filename,start,length)
+    把字节数组b的内容写到文件filename中。参数同上。
+
+Byte.get16(b,start)
+    从数组b中读取一个有符号16位整数。
+    start 数组中的读取位置，从0开始。
+
+Byte.set16(b,start,v)
+    把有符号16位整数写入数组b中。
+    start 数组中的写位置，从0开始。
+
+Byte.getu16(b,start)
+    从数组b中读取一个无符号16位整数。主要用于访问人物经验。
+
+Byte.setu16(b,start,v)
+    把无符号16位整数写入数组b中。
+  
+Byte.get32(b,start)
+    从数组b中读取一个有符号32位整数。    
+
+Byte.set32(b,start,v)
+    把有符号32位整数写入数组b中。
+   
+Byte.getstr(b,start,length)
+    从数组b中读取一个字符串，长度为length。
+
+Byte.setstr(b,start,length,str)
+    把字符串str写入到数组b中。最长写入长度为length。
+ 
+      {"getstr", Byte_getstr},
+      {"setstr", Byte_setstr},

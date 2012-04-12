@@ -1,0 +1,30 @@
+
+
+        转换原始kdef和talk文件说明 v2.0
+
+
+
+    由于本复刻版采用lua做语言，事件实现采用lua语言本身即可实现。而且可以实现更多功能。
+因此就需要把原有的kdef和talk文件翻译为lua语言，以便可以运行。
+    
+    注意不能转换带有50指令的事件。
+
+    翻译的具体步骤如下：
+
+1. 先使用fishedit0.72版，把kdef和talk导出为文本文件。复制到本目录。
+   两个文本文件名应该为：talk.txt和kdefout.txt
+
+2. 确保当前目录下存在oldevent目录。保存生成的事件文件。如果没有，则手工建立
+
+3. 运行批处理文件 convertkdef2.bat。则自动生成oldtalk.grp。并在oldevent目录下生成
+   事件文件oldevent_xxx.lua，每个事件一个文件
+
+4. 事件文件中有几个错误。需要进行修改：
+   把当前目录下的oldevent_xxx.lua文件覆盖到oldevent目录
+
+5. 结束。
+
+
+
+
+
