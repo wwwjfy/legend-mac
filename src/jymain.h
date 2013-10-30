@@ -10,7 +10,7 @@
 #include "SDL_image.h"
 #include "SDL_mixer.h"
 #ifdef HAS_SDL_MPEG
-    #include "smpeg.h"
+    #include "smpeg/smpeg.h"
 #endif
 
 #include "lua.h"
