@@ -1,11 +1,13 @@
 基于游泳的鱼的金庸群侠传lua复刻版，修改gbk编码为utf8编码，移植到Mac OS X上。
 
+在 Lua 5.2.4 下编译成功
+
 ### 编译
 
- - 用 Homebrew 安装 sdl, sdl\_image, sdl\_mixer, sdl\_ttf
+ - 用 Homebrew 安装 lua, sdl, sdl\_image, sdl\_mixer, sdl\_ttf
 
 ```
-brew install sdl sdl_image sdl_mixer sdl_ttf
+brew install lua sdl sdl_image sdl_mixer sdl_ttf
 ```
 
  - 安装 smpeg

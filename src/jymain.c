@@ -47,7 +47,7 @@ static int IsDebug=0;         //是否打开跟踪文件
 static char JYMain_Lua[255];  //lua主函数
 
 //定义的lua接口函数名
-static const struct luaL_reg jylib [] = {
+static const struct luaL_Reg jylib [] = {
       {"Debug", HAPI_Debug},
 
       {"GetKey", HAPI_GetKey},
@@ -105,7 +105,7 @@ static const struct luaL_reg jylib [] = {
  
  
 
-static const struct luaL_reg bytelib [] = {
+static const struct luaL_Reg bytelib [] = {
       {"create", Byte_create},
       {"loadfile", Byte_loadfile},
       {"savefile", Byte_savefile},
@@ -132,7 +132,7 @@ int main(int argc, char *argv[])
     freopen(ERROR_FILE,"wt",stderr);    //设置stderr输出到文件
 
 	//初始化lua
-	pL_main=lua_open();
+	pL_main=luaL_newstate();
     luaL_openlibs(pL_main);
 
     Lua_Config(pL_main,CONFIG_FILE);        //读取lua配置文件，设置参数
@@ -160,8 +160,8 @@ int Lua_Main(lua_State *pL_main)
 	int result=0; 
  
     //注册lua函数
-    luaL_register(pL_main,"lib", jylib);
-    luaL_register(pL_main, "Byte", bytelib);
+    luaL_openlib(pL_main, "lib", jylib, 0);
+    luaL_openlib(pL_main, "Byte", bytelib, 0);
  
 	//加载lua文件
     result=luaL_loadfile(pL_main,JYMain_Lua);
