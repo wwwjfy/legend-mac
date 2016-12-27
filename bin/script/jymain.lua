@@ -255,7 +255,7 @@ function NewGame()     --选择新游戏，设置主角初始属性
         i=0; y1=y1+h;
         DrawAttrib("生命","生命"); DrawAttrib("医疗","医疗能力");DrawAttrib("用毒","用毒能力"); DrawAttrib("解毒","解毒能力");
         i=0; y1=y1+h;
-        DrawAttrib("拳掌","拳掌功夫"); DrawAttrib("御剑","御剑能力");  DrawAttrib("耍刀","耍刀技巧"); DrawAttrib("暗器","暗器技巧");
+        DrawAttrib("拳掌","拳掌功夫"); DrawAttrib("御剑","御剑能力");  DrawAttrib("耍刀","耍刀技巧"); DrawAttrib("暗器","暗器技巧");DrawAttrib("资质","资质");
 
         ShowScreen();
 
