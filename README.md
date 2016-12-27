@@ -41,3 +41,8 @@ make
 cd ../bin
 ./jy # run game
 ```
+
+## 已知问题
+
+- macOS Sierra 下动画播放卡顿
+- 因为使用luaL_openlib，不能使用Lua5.3编译
