@@ -1,0 +1,4 @@
+SDLFLAG=`pkg-config --cflags --libs SDL`
+LUAFLAG=`pkg-config --cflags --libs lua5.2`
+all:
+	gcc *.c -o ../bin/jy -I/usr/include/lua5.2/ `sdl-config --cflags --libs` -L/usr/lib/x86_64-linux-gnu -llua5.2 -lSDL_ttf -lSDL_image -lSDL_mixer -lsmpeg 
