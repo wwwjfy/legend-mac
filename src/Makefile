@@ -1,5 +1,5 @@
 SDLFLAG=`pkg-config --cflags --libs sdl`
-LUAFLAG=`pkg-config --cflags --libs lua5.2`
+LUAFLAG=`pkg-config --cflags --libs lua5.3`
 OTHERFLAG= -lSDL_ttf -lSDL_image -lSDL_mixer -lsmpeg 
 RM= rm -rf
 all:
