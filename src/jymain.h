@@ -1,4 +1,4 @@
-// 头文件 
+// 头文件
 
 #ifndef _JYMAIN_H
 #define _JYMAIN_H
@@ -16,10 +16,10 @@
 #include "lua.h"
 #include "lualib.h"
 #include "lauxlib.h"
- 
+
 #include "luafun.h"
 
-#include "list.h" 
+#include "list.h"
 
 
 
@@ -32,7 +32,7 @@ extern "C" {
 
 //安全free指针的宏
 
-#define SafeFree(p) for(;;) {if(p) {free(p);p=NULL;}break;} 
+#define SafeFree(p) for(;;) {if(p) {free(p);p=NULL;}break;}
 
 //全程变量
 
@@ -55,6 +55,8 @@ int JY_Debug(const char * str,...);
 
 // 输出信息到文件error.txt中
 int JY_Error(const char * fmt,...);
+
+int JY_ErrorExit(const char * fmt,...);
 
 //限制 x在 xmin-xmax之间
 int limitX(int x, int xmin, int xmax);
@@ -88,14 +90,14 @@ static TTF_Font *GetFont(const char *filename,int size);
 // x,y 坐标
 // str 字符串
 // color 颜色
-// size 字体大小，字形为宋体。 
+// size 字体大小，字形为宋体。
 // fontname 字体名
 int JY_DrawStr(int x, int y, const char *str,int color,int size,const char *fontname);
 
 
 //PicCache.c
 
-// 定义使用的链表 
+// 定义使用的链表
 struct CacheNode{    //贴图cache链表节点
 	SDL_Surface *s;               // 此贴图对应的表面
 	int xoff;                     // 贴图偏移
@@ -130,15 +132,15 @@ int JY_LoadPic(int fileid, int picid, int x,int y,int flag,int value);
 static int LoadPic(int fileid,int picid, struct CacheNode *cache);
 
 int JY_GetPicXY(int fileid, int picid, int *w,int *h,int *xoff,int *yoff);
- 
+
 static SDL_Surface* CreatePicSurface32(unsigned char *data, int w,int h,int datalong);
 
-static int LoadPallette(char *filename); 
- 
+static int LoadPallette(char *filename);
+
 
 //mainmap.c
 
-typedef struct Building_Type{   
+typedef struct Building_Type{
 	int x;
 	int y;
 	int num;
@@ -204,7 +206,7 @@ int JY_CleanWarMap(int level,int v);
 
 int JY_DrawWarMap(int flag, int x, int y, int v1,int v2,int v3);
 
- 
+
 
 
 //sdlfun.c
@@ -223,7 +225,7 @@ int ExitGame(void);
 
 int JY_LoadPicture(const char* str,int x,int y);
 
-int JY_ShowSurface(int flag); 
+int JY_ShowSurface(int flag);
 
 int JY_ShowSlow(int delaytime,int Flag);
 
@@ -275,5 +277,5 @@ SDL_Rect RotateReverseRect(const SDL_Rect *rect);
 }
 #endif
 
- 
+
 #endif

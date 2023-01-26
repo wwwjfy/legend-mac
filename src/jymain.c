@@ -2,9 +2,11 @@
 // 主程序
 // 本程序为游泳的鱼编写。
 // 版权所无，您可以以任何方式使用代码
-  
+
 
 #include <stdio.h>
+#include <unistd.h>
+#include <libgen.h>
 #include <time.h>
 
 #include "jymain.h"
@@ -31,7 +33,7 @@ int g_XScale=18;             //贴图x,y方向一半大小
 int g_YScale=9;
 
 //各个地图绘制时xy方向需要多绘制的余量。保证可以全部显示
-int g_MMapAddX;              
+int g_MMapAddX;
 int g_MMapAddY;
 int g_SMapAddX;
 int g_SMapAddY;
@@ -42,7 +44,7 @@ int g_MAXCacheNum=1000;     //最大缓存数量
 
 int g_LoadFullS=1;          //是否全部加载S文件
 int g_LoadMMapType=0;          //是否全部加载M文件
-int g_LoadMMapScope=0;       
+int g_LoadMMapScope=0;
 int g_PreLoadPicGrp=1;      //是否预先加载贴图文件的grp
 
 static int IsDebug=0;         //是否打开跟踪文件
@@ -58,10 +60,10 @@ static const struct luaL_Reg jylib [] = {
 
       {"Delay", HAPI_Delay},
       {"GetTime", HAPI_GetTime},
-  
+
       {"DrawStr", HAPI_DrawStr},
 
-      
+
       {"SetClip",HAPI_SetClip},
       {"FillColor", HAPI_FillColor},
       {"Background", HAPI_Background},
@@ -82,12 +84,12 @@ static const struct luaL_Reg jylib [] = {
       {"PlayMIDI", HAPI_PlayMIDI},
       {"PlayWAV", HAPI_PlayWAV},
       {"PlayMPEG", HAPI_PlayMPEG},
-      
+
 	  {"LoadMMap", HAPI_LoadMMap},
       {"DrawMMap", HAPI_DrawMMap},
       {"GetMMap", HAPI_GetMMap},
 	  {"UnloadMMap", HAPI_UnloadMMap},
- 
+
       {"LoadSMap", HAPI_LoadSMap},
       {"SaveSMap", HAPI_SaveSMap},
       {"GetS", HAPI_GetS},
@@ -105,8 +107,8 @@ static const struct luaL_Reg jylib [] = {
 
       {NULL, NULL}
     };
- 
- 
+
+
 
 static const struct luaL_Reg bytelib [] = {
       {"create", Byte_create},
@@ -131,6 +133,9 @@ int main(int argc, char *argv[])
 {
 	lua_State *pL_main;
 
+    char abs_path[PATH_MAX];
+    chdir(dirname(realpath(argv[0], abs_path)));
+
 	remove(DEBUG_FILE);
     freopen(ERROR_FILE,"wt",stderr);    //设置stderr输出到文件
 
@@ -142,7 +147,7 @@ int main(int argc, char *argv[])
 
     InitSDL();           //初始化SDL
 
-	InitGame();          //初始化游戏数据 
+	InitGame();          //初始化游戏数据
 
     Lua_Main(pL_main);          //调用Lua主函数，开始游戏
 
@@ -150,8 +155,8 @@ int main(int argc, char *argv[])
     lua_close(pL_main);
 
 	ExitGame();       //释放游戏数据
- 
-    ExitSDL();        //退出SDL 
+
+    ExitSDL();        //退出SDL
 
     return 0;
 }
@@ -160,29 +165,29 @@ int main(int argc, char *argv[])
 //Lua主函数
 int Lua_Main(lua_State *pL_main)
 {
-	int result=0; 
- 
+	int result=0;
+
     //注册lua函数
     luaL_openlib(pL_main, "lib", jylib, 0);
     luaL_openlib(pL_main, "Byte", bytelib, 0);
- 
+
 	//加载lua文件
     result=luaL_loadfile(pL_main,JYMain_Lua);
     switch(result){
     case LUA_ERRSYNTAX:
-        JY_Error("load lua file %s error: syntax error!\n",JYMain_Lua);
+        JY_ErrorExit("load lua file %s error: syntax error!\n",JYMain_Lua);
         break;
     case LUA_ERRMEM:
-        JY_Error("load lua file %s error: memory allocation error!\n",JYMain_Lua);
+        JY_ErrorExit("load lua file %s error: memory allocation error!\n",JYMain_Lua);
         break;
     case LUA_ERRFILE:
-        JY_Error("load lua file %s error: can not open file!\n",JYMain_Lua);
-        break;    
+        JY_ErrorExit("load lua file %s error: can not open file!\n",JYMain_Lua);
+        break;
     }
-    
+
 	result=lua_pcall(pL_main, 0, LUA_MULTRET, 0);
-    
-    //调用lua的主函数JY_Main    
+
+    //调用lua的主函数JY_Main
    	lua_getglobal(pL_main,"JY_Main");
 	result=lua_pcall(pL_main,0,0,0);
 
@@ -193,20 +198,20 @@ int Lua_Main(lua_State *pL_main)
 //Lua读取配置信息
 int Lua_Config(lua_State *pL,const char *filename)
 {
-	int result=0; 
- 
+	int result=0;
+
 	//加载lua配置文件
     result=luaL_loadfile(pL,filename);
     switch(result){
     case LUA_ERRSYNTAX:
-        JY_Error("load lua file %s error: syntax error!\n",filename);
+        JY_ErrorExit("load lua file %s error: syntax error!\n",filename);
         break;
     case LUA_ERRMEM:
-        JY_Error("load lua file %s error: memory allocation error!\n",filename);
+        JY_ErrorExit("load lua file %s error: memory allocation error!\n",filename);
         break;
     case LUA_ERRFILE:
-        JY_Error("load lua file %s error: can not open file!\n",filename);
-        break;    
+        JY_ErrorExit("load lua file %s error: can not open file!\n",filename);
+        break;
     }
 
 	result=lua_pcall(pL, 0, LUA_MULTRET, 0);
@@ -235,8 +240,8 @@ int Lua_Config(lua_State *pL,const char *filename)
     g_LoadMMapType =getfield(pL, "LoadMMapType");
     g_LoadMMapScope =getfield(pL, "LoadMMapScope");
     g_PreLoadPicGrp =getfield(pL, "PreLoadPicGrp");
-  
-     getfieldstr(pL,"JYMain_Lua",JYMain_Lua);
+
+    getfieldstr(pL,"JYMain_Lua",JYMain_Lua);
 
 	return 0;
 }
@@ -255,11 +260,11 @@ int getfield(lua_State *pL,const char *key)
 //读取lua表中的字符串
 int getfieldstr(lua_State *pL,const char *key,char *str)
 {
- 
+
 	const char *tmp;
 	lua_getfield(pL,-1,key);
 	tmp=(const char *)lua_tostring(pL,-1);
-	strcpy(str,tmp); 
+	strcpy(str,tmp);
 	lua_pop(pL,1);
 	return 0;
 }
@@ -294,26 +299,43 @@ int JY_Debug(const char * fmt,...)
  	fclose(fp);
 	return 0;
 }
+
 // 调试函数
 // 输出到error.txt中
 int JY_Error(const char * fmt,...)
 {
     time_t t;
     struct tm *newtime;
- 
+
     va_list argptr;
     char string[1024];
-       
+
 	va_start(argptr, fmt);
 	vsnprintf(string, sizeof(string), fmt, argptr);
 	va_end(argptr);
-    
+
 	time(&t);
     newtime=localtime(&t);
 	fprintf(stderr,"%02d:%02d:%02d %s\n",newtime->tm_hour,newtime->tm_min,newtime->tm_sec,string);
  	fflush(stderr);
+
 	return 0;
-} 
+}
+
+int JY_ErrorExit(const char * fmt,...)
+{
+    va_list argptr;
+    char string[1024];
+
+	va_start(argptr, fmt);
+	vsnprintf(string, sizeof(string), fmt, argptr);
+	va_end(argptr);
+
+    JY_Error(string);
+
+    printf("critical error, quitting... Please check error.txt for details.");
+    exit(1);
+}
 
 // 限制x大小
 int limitX(int x, int xmin, int xmax)
@@ -328,14 +350,14 @@ int limitX(int x, int xmin, int xmax)
 // 返回文件长度，若为0，则文件可能不存在
 int FileLength(const char *filename)
 {
-    FILE   *f;  
+    FILE   *f;
     int ll;
     if((f=fopen(filename,"rb"))==NULL){
         return 0;            // 文件不存在，返回
 	}
-    fseek(f,0,SEEK_END);  
+    fseek(f,0,SEEK_END);
     ll=ftell(f);    //这里得到的len就是文件的长度了
-    fclose(f);   
+    fclose(f);
 	return ll;
 }
 
