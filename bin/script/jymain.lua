@@ -1939,7 +1939,7 @@ end
 
 --返回 [0 , i-1] 的整形随机数
 function Rnd(i)           --随机数
-    local r=math.random(i);
+    local r=math.random(math.floor(i));
     return r-1;
 end
 
