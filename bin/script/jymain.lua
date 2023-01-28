@@ -1950,6 +1950,7 @@ end
 --返回1,实际增加的值
 --返回2，字符串：xxx 增加/减少 xxxx，用于显示药品效果
 function AddPersonAttrib(id,str,value)            --增加人物属性
+    value = math.floor(value);
     local oldvalue=JY.Person[id][str];
     local attribmax=math.huge;
     if str=="生命" then
@@ -2383,7 +2384,6 @@ end
 --判断一个人是否可以装备或修炼一个物品
 --返回 true可以修炼，false不可
 function CanUseThing(id,personid)           --判断一个人是否可以装备或修炼一个物品
-    local str="";
     if JY.Thing[id]["仅修炼人物"] >=0 then
         if JY.Thing[id]["仅修炼人物"] ~= personid then
             return false;
@@ -5210,7 +5210,7 @@ function War_Fight_Sub(id,wugongnum,x,y)          --执行战斗
     local wugong=JY.Person[pid]["武功" .. wugongnum];
     local level=math.modf(JY.Person[pid]["武功等级" .. wugongnum]/100)+1;
 
-       CleanWarMap(4,0);
+    CleanWarMap(4,0);
 
     local fightscope=JY.Wugong[wugong]["攻击范围"];
     --在map4标注武功攻击效果
@@ -5235,54 +5235,54 @@ function War_Fight_Sub(id,wugongnum,x,y)          --执行战斗
         fightnum=2;
     end
 
-for k=1,fightnum  do         --如果左右互搏，则攻击两次
-    for i=0,CC.WarWidth-1 do
-        for j=0,CC.WarHeight-1 do
-            local effect=GetWarMap(i,j,4);
-            if effect>0 then              --攻击效果地方
-                  local emeny=GetWarMap(i,j,2);
-                 if emeny>=0 then          --有人
-                     if WAR.Person[WAR.CurID]["我方"] ~= WAR.Person[emeny]["我方"] then       --是敌人
-                         --只有点和面攻击可以杀内力。此时伤害类型有效
-                         if JY.Wugong[wugong]["伤害类型"]==1 and (fightscope==0 or fightscope==3) then
-                             WAR.Person[emeny]["点数"]=-War_WugongHurtNeili(emeny,wugong,level)
-                             SetWarMap(i,j,4,3);
-                             WAR.Effect=3;
-                         else
-                             WAR.Person[emeny]["点数"]=-War_WugongHurtLife(emeny,wugong,level)
-                             WAR.Effect=2;
-                             SetWarMap(i,j,4,2);
+    for k=1,fightnum  do         --如果左右互搏，则攻击两次
+        for i=0,CC.WarWidth-1 do
+            for j=0,CC.WarHeight-1 do
+                local effect=GetWarMap(i,j,4);
+                if effect>0 then              --攻击效果地方
+                      local emeny=GetWarMap(i,j,2);
+                     if emeny>=0 then          --有人
+                         if WAR.Person[WAR.CurID]["我方"] ~= WAR.Person[emeny]["我方"] then       --是敌人
+                             --只有点和面攻击可以杀内力。此时伤害类型有效
+                             if JY.Wugong[wugong]["伤害类型"]==1 and (fightscope==0 or fightscope==3) then
+                                 WAR.Person[emeny]["点数"]=-War_WugongHurtNeili(emeny,wugong,level)
+                                 SetWarMap(i,j,4,3);
+                                 WAR.Effect=3;
+                             else
+                                 WAR.Person[emeny]["点数"]=-War_WugongHurtLife(emeny,wugong,level)
+                                 WAR.Effect=2;
+                                 SetWarMap(i,j,4,2);
+                             end
                          end
                      end
                  end
              end
-         end
+        end
+
+        War_ShowFight(pid,wugong,JY.Wugong[wugong]["武功类型"],level,x,y,JY.Wugong[wugong]["武功动画&音效"]);
+
+        for i=0,WAR.PersonNum-1 do
+            WAR.Person[i]["点数"]=0;
+        end
+
+        WAR.Person[WAR.CurID]["经验"]=WAR.Person[WAR.CurID]["经验"]+2;
+
+        if JY.Person[pid]["武功等级" .. wugongnum]<900 then
+            JY.Person[pid]["武功等级" .. wugongnum]=JY.Person[pid]["武功等级" .. wugongnum]+Rnd(2)+1;
+        end
+
+        if math.modf(JY.Person[pid]["武功等级" .. wugongnum]/100)+1 ~= level then    --武功升级了
+            level=math.modf(JY.Person[pid]["武功等级" .. wugongnum]/100)+1;
+            DrawStrBox(-1,-1,string.format("%s 升为 %d 级",JY.Wugong[wugong]["名称"],level),C_ORANGE,CC.DefaultFont)
+            ShowScreen();
+            lib.Delay(500);
+            Cls();
+            ShowScreen();
+        end
+
+        AddPersonAttrib(pid,"内力",-math.modf((level+1)/2)*JY.Wugong[wugong]["消耗内力点数"])
+
     end
-
-    War_ShowFight(pid,wugong,JY.Wugong[wugong]["武功类型"],level,x,y,JY.Wugong[wugong]["武功动画&音效"]);
-
-    for i=0,WAR.PersonNum-1 do
-        WAR.Person[i]["点数"]=0;
-    end
-
-    WAR.Person[WAR.CurID]["经验"]=WAR.Person[WAR.CurID]["经验"]+2;
-
-    if JY.Person[pid]["武功等级" .. wugongnum]<900 then
-        JY.Person[pid]["武功等级" .. wugongnum]=JY.Person[pid]["武功等级" .. wugongnum]+Rnd(2)+1;
-    end
-
-    if math.modf(JY.Person[pid]["武功等级" .. wugongnum]/100)+1 ~= level then    --武功升级了
-        level=math.modf(JY.Person[pid]["武功等级" .. wugongnum]/100)+1;
-        DrawStrBox(-1,-1,string.format("%s 升为 %d 级",JY.Wugong[wugong]["名称"],level),C_ORANGE,CC.DefaultFont)
-        ShowScreen();
-        lib.Delay(500);
-        Cls();
-        ShowScreen();
-    end
-
-    AddPersonAttrib(pid,"内力",-math.modf((level+1)/2)*JY.Wugong[wugong]["消耗内力点数"])
-
-end
 
     AddPersonAttrib(pid,"体力",-3);
 

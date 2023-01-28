@@ -597,7 +597,7 @@ int Byte_getu16(lua_State *pL)
 	int start=(int)lua_tonumber(pL,2);
 
 	unsigned short v=*(unsigned short*)(p+start);
-	lua_pushnumber(pL,v);
+	lua_pushinteger(pL,v);
 	return 1;
 }
 
