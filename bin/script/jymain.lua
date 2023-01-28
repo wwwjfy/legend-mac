@@ -4080,6 +4080,7 @@ function WarSetGlobal()            --设置战斗全程变量
         WAR.Person[i]["点数"]=0;
         WAR.Person[i]["经验"]=0;
         WAR.Person[i]["自动选择对手"]=-1;     --自动战斗中每个人选择的战斗对手
+        WAR.Person[i]["贴图缓存"]=4;
    end
 
     WAR.PersonNum=0;               --战斗人物个数
@@ -4151,6 +4152,7 @@ function WarMain(warid,isexp)           --战斗主函数
         lib.PicLoadFile(string.format(CC.FightPicFile[1],JY.Person[pid]["头像代号"]),
                         string.format(CC.FightPicFile[2],JY.Person[pid]["头像代号"]),
                         4+i);
+        WAR.Person[i]["贴图缓存"]=4+i;
     end
 
     while true do             --战斗主循环
@@ -5468,7 +5470,6 @@ end
 --eft  武功动画效果id  eft.idx/grp中的效果
 
 function War_ShowFight(pid,wugong,wugongtype,level,x,y,eft)              --显示战斗动画
-
     local x0=WAR.Person[WAR.CurID]["坐标X"];
     local y0=WAR.Person[WAR.CurID]["坐标Y"];
 
@@ -5523,7 +5524,7 @@ function War_ShowFight(pid,wugong,wugongtype,level,x,y,eft)              --显�
         local mytype;
         if fightframe>0 then
             WAR.Person[WAR.CurID]["贴图类型"]=1;
-            mytype=4+WAR.CurID;
+            mytype=WAR.Person[WAR.CurID]["贴图缓存"];
             if i<fightframe then
                 WAR.Person[WAR.CurID]["贴图"]=(startframe+WAR.Person[WAR.CurID]["人方向"]*fightframe+i)*2;
             end
