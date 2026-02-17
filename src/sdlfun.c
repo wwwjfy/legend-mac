@@ -2,7 +2,6 @@
 
 // SDL 相关函数
 
-#include <unistd.h>
 #include "jymain.h"
 
 static Mix_Music *currentMusic=NULL;         //播放音乐数据，由于同时只播放一个，用一个变量
@@ -116,7 +115,7 @@ int InitSDL(void)
     if(r<0)
         g_EnableSound=0;
 
-    Mix_Init(MIX_INIT_MID);
+    Mix_Init(MIX_INIT_OPUS);
 
     r=Mix_OpenAudio(MIX_DEFAULT_FREQUENCY, MIX_DEFAULT_FORMAT, 2, 4096);
 
@@ -124,23 +123,6 @@ int InitSDL(void)
         JY_Error(
                 "Couldn't initialize SDL_Mixer: %s\n", Mix_GetError());
         g_EnableSound=0;
-    }
-
-    // FluidSynth MIDI backend requires a SoundFont (.sf2) file.
-    // Try common install locations; SDL_SOUNDFONTS env var overrides all.
-    if(!Mix_GetSoundFonts()){
-        const char *sf2_paths[] = {
-            "/opt/homebrew/share/fluid-synth/sf2/VintageDreamsWaves-v2.sf2",
-            "/usr/share/sounds/sf2/FluidR3_GM.sf2",
-            "/usr/share/soundfonts/FluidR3_GM.sf2",
-            NULL
-        };
-        int k;
-        for(k=0; sf2_paths[k]; k++){
-            FILE *fp=fopen(sf2_paths[k],"rb");
-            if(fp){ fclose(fp); Mix_SetSoundFonts(sf2_paths[k]); break; }
-        }
-        JY_Debug("SoundFont: %s", Mix_GetSoundFonts() ? Mix_GetSoundFonts() : "none found");
     }
 
 	currentWav=0;
