@@ -16,6 +16,7 @@ LUALIB_API void (luaL_openlib) (lua_State *L, const char *libname,
 
 // 全程变量
 
+SDL_Window* g_Window=NULL;       // 游戏窗口
 SDL_Surface* g_Surface=NULL;    // 游戏使用的视频表面
 Uint32 g_MaskColor32=0x706020;      // 透明色
 

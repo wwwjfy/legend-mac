@@ -434,7 +434,7 @@ static SDL_Surface* CreatePicSurface32(unsigned char *data, int w,int h,int data
 	if(ps1==NULL){
 		JY_Error("CreatePicSurface32: cannot create SDL_Surface ps1!\n");
 	}
-	ps2=SDL_DisplayFormat(ps1);   // 把32位表面改为当前表面
+	ps2=SDL_ConvertSurface(ps1, g_Surface->format, 0);   // 把32位表面改为当前表面
 	if(ps2==NULL){
 		JY_Error("CreatePicSurface32: cannot create SDL_Surface ps2!\n");
 	}
@@ -442,7 +442,8 @@ static SDL_Surface* CreatePicSurface32(unsigned char *data, int w,int h,int data
 	SDL_FreeSurface(ps1);      
 	SafeFree(data32);
    	
-    SDL_SetColorKey(ps2,SDL_SRCCOLORKEY|SDL_RLEACCEL ,ConvertColor(g_MaskColor32));  //透明色
+    SDL_SetColorKey(ps2, SDL_TRUE, ConvertColor(g_MaskColor32));  //透明色
+    SDL_SetSurfaceRLE(ps2, 1);  // RLE acceleration
 
     return ps2;
    	

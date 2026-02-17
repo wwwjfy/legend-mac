@@ -5,13 +5,10 @@
 
 #include "config.h"
 
-#include "SDL.h"
-#include "SDL_ttf.h"
-#include "SDL_image.h"
-#include "SDL_mixer.h"
-#ifdef HAS_SDL_MPEG
-    #include "smpeg/smpeg.h"
-#endif
+#include "SDL2/SDL.h"
+#include "SDL2/SDL_ttf.h"
+#include "SDL2/SDL_image.h"
+#include "SDL2/SDL_mixer.h"
 
 #include "lua.h"
 #include "lualib.h"
@@ -211,7 +208,9 @@ int JY_DrawWarMap(int flag, int x, int y, int v1,int v2,int v3);
 
 //sdlfun.c
 
-static int KeyFilter(const SDL_Event *event);
+static int KeyFilter(void *userdata, SDL_Event *event);
+
+extern SDL_Window* g_Window;
 
 int InitSDL(void);
 

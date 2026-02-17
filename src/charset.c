@@ -131,10 +131,12 @@ int JY_DrawStr(int x, int y, const char *str,int color,int size,const char *font
     c.r=(Uint8) ((color & 0xff0000) >>16);
 	c.g=(Uint8) ((color & 0xff00)>>8);
 	c.b=(Uint8) ((color & 0xff));
+	c.a=255;
 
 	c2.r=c.r>>1;   //阴影色
 	c2.b=c.b>>1;
 	c2.g=c.g>>1;
+	c2.a=255;
 
     strcpy(tmp,str);
 	 
@@ -167,13 +169,13 @@ int JY_DrawStr(int x, int y, const char *str,int color,int size,const char *font
 
 		rect_dest.x=rect2.x+1;
 		rect_dest.y=rect2.y+1;
-		SDL_SetColors(fontSurface,&c2,1,1);
+		SDL_SetPaletteColors(fontSurface->format->palette,&c2,1,1);
 		SDL_BlitSurface(fontSurface, NULL, g_Surface, &rect_dest);    //表面写到游戏表面--阴影色
 
 		rect_dest.x=rect2.x;
 		rect_dest.y=rect2.y;
-		SDL_SetColors(fontSurface,&c,1,1);
-		SDL_BlitSurface(fontSurface, NULL, g_Surface, &rect_dest);    //表面写到游戏表面 
+		SDL_SetPaletteColors(fontSurface->format->palette,&c,1,1);
+		SDL_BlitSurface(fontSurface, NULL, g_Surface, &rect_dest);    //表面写到游戏表面
 
 	}
 	else if(g_Rotate==1){
@@ -184,13 +186,13 @@ int JY_DrawStr(int x, int y, const char *str,int color,int size,const char *font
 
 		rect_dest.x=rect2.x-1;
 		rect_dest.y=rect2.y+1;
-		SDL_SetColors(fontSurface,&c2,1,1);
+		SDL_SetPaletteColors(fontSurface->format->palette,&c2,1,1);
 		SDL_BlitSurface(fontSurface, NULL, g_Surface, &rect_dest);    //表面写到游戏表面 --阴影色
 
 		rect_dest.x=rect2.x;
-		rect_dest.y=rect2.y; 
-		SDL_SetColors(fontSurface,&c,1,1);
-		SDL_BlitSurface(fontSurface, NULL, g_Surface, &rect_dest);    //表面写到游戏表面 
+		rect_dest.y=rect2.y;
+		SDL_SetPaletteColors(fontSurface->format->palette,&c,1,1);
+		SDL_BlitSurface(fontSurface, NULL, g_Surface, &rect_dest);    //表面写到游戏表面
         
 	}
 

@@ -105,9 +105,8 @@ int HAPI_GetKey(lua_State *pL)
 
 int HAPI_EnableKeyRepeat(lua_State *pL)
 {
-	int delay=(int)lua_tonumber(pL,1);
-	int interval=(int)lua_tonumber(pL,2);
-    SDL_EnableKeyRepeat(delay,interval);
+	// SDL2 removed SDL_EnableKeyRepeat; key repeat is always enabled
+	(void)pL;
 	return 0;
 }
 

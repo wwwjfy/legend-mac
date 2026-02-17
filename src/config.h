@@ -29,11 +29,7 @@
 #endif
 
 
-//定义是否包含smpeg库
-
-#if !defined(__SYMBIAN32__)
-    #define HAS_SDL_MPEG
-#endif
+//smpeg库已移除，不再定义HAS_SDL_MPEG
 
 #if defined(_MSC_VER)
 //定义高精度时钟。仅x86有效。只用于调试，用来测试小于1ms的时间间隔。正式发布版本不应该使用

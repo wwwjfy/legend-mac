@@ -16,6 +16,7 @@ static int currentWav=0;                  //当前播放的音效
 static SDL_Rect ClipRect[RECTNUM];        // 当前设置的剪裁矩形
 static int currentRect=0;
 
+extern SDL_Window* g_Window;          // 游戏窗口
 extern SDL_Surface* g_Surface;        // 游戏使用的视频表面
 extern Uint32 g_MaskColor32;      // 透明色
 
@@ -32,7 +33,7 @@ extern int g_SoundVolume;
 
 
 //过滤ESC、RETURN、SPACE键，使他们按下后不能重复。
-static int KeyFilter(const SDL_Event *event)
+static int KeyFilter(void *userdata, SDL_Event *event)
 {
 	static int Esc_KeyPress=0;
 	static int Space_KeyPress=0;
@@ -96,8 +97,7 @@ int InitSDL(void)
 {
 	int r;
 	int i;
-	char tmpstr[255];
-   
+
 	r=SDL_Init(SDL_INIT_VIDEO);
     if( r < 0 ) {
         JY_Error(
@@ -107,8 +107,7 @@ int InitSDL(void)
 
     //atexit(SDL_Quit);    可能有问题，屏蔽掉
  
-    SDL_VideoDriverName(tmpstr, 255);
-	JY_Debug("Video Driver: %s\n",tmpstr);
+    JY_Debug("Video Driver: %s\n",SDL_GetCurrentVideoDriver());
 
     InitFont();  //初始化
     
@@ -129,7 +128,7 @@ int InitSDL(void)
     for(i=0;i<WAVNUM;i++)
          WavChunk[i]=NULL;
 
-    SDL_SetEventFilter(KeyFilter);
+    SDL_SetEventFilter(KeyFilter, NULL);
 
     return 0;
 }
@@ -153,6 +152,10 @@ int ExitSDL(void)
 	Mix_CloseAudio();
 
     JY_LoadPicture("",0,0);    // 释放可能加载的图片表面
+    if(g_Window){
+        SDL_DestroyWindow(g_Window);
+        g_Window = NULL;
+    }
     SDL_Quit();
     return 0;
 }
@@ -179,14 +182,23 @@ int InitGame(void)
 	}
 
 
-    if(g_FullScreen==0)
-        g_Surface=SDL_SetVideoMode(w,h, 0, SDL_SWSURFACE);
-	else
-	    g_Surface=SDL_SetVideoMode(w, h, g_ScreenBpp, SDL_HWSURFACE|SDL_DOUBLEBUF|SDL_FULLSCREEN);
-
-
-	if(g_Surface==NULL)
-		JY_Error("Cannot set video mode");
+    {
+        Uint32 flags = SDL_WINDOW_SHOWN;
+        if(g_FullScreen)
+            flags |= SDL_WINDOW_FULLSCREEN;
+        g_Window = SDL_CreateWindow("JY Legend",
+            SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+            w, h, flags);
+        if(g_Window == NULL){
+            JY_Error("Cannot create window: %s", SDL_GetError());
+        }
+        else{
+            g_Surface = SDL_GetWindowSurface(g_Window);
+            if(g_Surface == NULL)
+                JY_Error("Cannot get window surface: %s", SDL_GetError());
+            SDL_RaiseWindow(g_Window);  // Ensure window has input focus
+        }
+    }
 
     Init_Cache();
 	
@@ -246,7 +258,7 @@ int JY_LoadPicture(const char* str,int x,int y)
         }
         tmppic = IMG_Load(str);
         if(tmppic){
-		    pic=SDL_DisplayFormat(tmppic);   // 改为当前表面的像素格式
+		    pic=SDL_ConvertSurface(tmppic, g_Surface->format, 0);   // 改为当前表面的像素格式
  		    SDL_FreeSurface(tmppic);
 			if(g_Rotate==1){
                 tmppic=RotateSurface(pic);
@@ -293,11 +305,11 @@ int JY_ShowSurface(int flag)
 {
 	if(flag==1){
 		if(currentRect>0){
-			SDL_UpdateRects(g_Surface,currentRect,ClipRect);
+			SDL_UpdateWindowSurfaceRects(g_Window,ClipRect,currentRect);
 		}
 	}
 	else{
-        SDL_UpdateRect(g_Surface,0,0,0,0);
+        SDL_UpdateWindowSurface(g_Window);
 	}
 	return 0;
 }
@@ -347,7 +359,8 @@ int JY_ShowSlow(int delaytime,int Flag)
 		if(alpha>255) 
 			alpha=255;
 
-        SDL_SetAlpha(lps1,SDL_SRCALPHA,(Uint8)alpha);  //设置alpha
+        SDL_SetSurfaceBlendMode(lps1, SDL_BLENDMODE_BLEND);
+        SDL_SetSurfaceAlphaMod(lps1,(Uint8)alpha);  //设置alpha
 
 
 		SDL_BlitSurface(lps1 ,NULL,g_Surface,NULL); 
@@ -471,14 +484,17 @@ int JY_GetKey()
 {
     SDL_Event event;
 	int keyPress=-1;
-    while(SDL_PollEvent(&event)){   
-		switch(event.type){   
-        case SDL_KEYDOWN:  
+    while(SDL_PollEvent(&event)){
+		switch(event.type){
+        case SDL_QUIT:
+            exit(0);
+            break;
+        case SDL_KEYDOWN:
             keyPress=event.key.keysym.sym;
             break;
         case SDL_MOUSEMOTION:
             break;
-        default: 
+        default:
             break;
         }
 	}	
@@ -759,7 +775,7 @@ int BlitSurface(SDL_Surface* lps, int x, int y ,int flag,int value)
 		                          lps->format->Rmask,lps->format->Gmask,lps->format->Bmask,0);
 
 		    SDL_FillRect(tmps,NULL,color);
-	        SDL_SetColorKey(tmps,SDL_SRCCOLORKEY ,color);
+	        SDL_SetColorKey(tmps,SDL_TRUE ,color);
             SDL_BlitSurface(lps,NULL,tmps,NULL);
             SDL_LockSurface(tmps);
 
@@ -817,15 +833,17 @@ int BlitSurface(SDL_Surface* lps, int x, int y ,int flag,int value)
 
             SDL_UnlockSurface(tmps);
 
-            SDL_SetAlpha(tmps,SDL_SRCALPHA,(Uint8)value);
+            SDL_SetSurfaceBlendMode(tmps, SDL_BLENDMODE_BLEND);
+            SDL_SetSurfaceAlphaMod(tmps,(Uint8)value);
 
 	        SDL_BlitSurface(tmps,NULL,g_Surface,&rect);
 
 		    SDL_FreeSurface(tmps);
         }
         else{
- 
-            SDL_SetAlpha(lps,SDL_SRCALPHA,(Uint8)value);
+
+            SDL_SetSurfaceBlendMode(lps, SDL_BLENDMODE_BLEND);
+            SDL_SetSurfaceAlphaMod(lps,(Uint8)value);
 
 	        SDL_BlitSurface(lps,NULL,g_Surface,&rect);
  
@@ -871,7 +889,8 @@ int JY_Background(int x1,int y1,int x2,int y2,int Bright)
  
     SDL_FillRect(lps1,NULL,0);
 
-    SDL_SetAlpha(lps1,SDL_SRCALPHA,(Uint8)Bright);
+    SDL_SetSurfaceBlendMode(lps1, SDL_BLENDMODE_BLEND);
+    SDL_SetSurfaceAlphaMod(lps1,(Uint8)Bright);
 
 	SDL_BlitSurface(lps1,NULL,g_Surface,&r2); 
 
@@ -940,37 +959,19 @@ int JY_PlayMPEG(const char* filename,int esckey)
 
 // 全屏切换
 int JY_FullScreen()
-{    
-    SDL_Surface *tmpsurface;
-	const SDL_VideoInfo *info;
-
-	Uint32 flag=g_Surface->flags;
-
-	tmpsurface=SDL_CreateRGBSurface(SDL_SWSURFACE,g_Surface->w,g_Surface->h,g_Surface->format->BitsPerPixel,
-		                      g_Surface->format->Rmask,g_Surface->format->Gmask,g_Surface->format->Bmask,0);
-
-    SDL_BlitSurface(g_Surface,NULL,tmpsurface,NULL);
-
-	if(flag & SDL_FULLSCREEN)    //全屏，设置窗口
-        g_Surface=SDL_SetVideoMode(g_Surface->w,g_Surface->h, 0, SDL_SWSURFACE);
-	else
-	    g_Surface=SDL_SetVideoMode(g_Surface->w, g_Surface->h, g_ScreenBpp, SDL_HWSURFACE|SDL_DOUBLEBUF|SDL_FULLSCREEN);
-
-
-	SDL_BlitSurface(tmpsurface,NULL,g_Surface,NULL);
+{
+    Uint32 flags = SDL_GetWindowFlags(g_Window);
+    if(flags & SDL_WINDOW_FULLSCREEN){
+        SDL_SetWindowFullscreen(g_Window, 0);
+    }
+    else{
+        SDL_SetWindowFullscreen(g_Window, SDL_WINDOW_FULLSCREEN);
+    }
+    g_Surface = SDL_GetWindowSurface(g_Window);
 
     JY_ShowSurface(0);
 
-	SDL_FreeSurface(tmpsurface);
-  
-    info=SDL_GetVideoInfo();    
-	JY_Debug("hw_available=%d,wm_available=%d",info->hw_available,info->wm_available);
-    JY_Debug("blit_hw=%d,blit_hw_CC=%d,blit_hw_A=%d",info->blit_hw,info->blit_hw_CC ,info->blit_hw_A );
-    JY_Debug("blit_sw=%d,blit_sw_CC=%d,blit_sw_A=%d",info->blit_hw,info->blit_hw_CC ,info->blit_hw_A );
-    JY_Debug("blit_fill=%d,videomem=%d",info->blit_fill,info->video_mem  );
-	JY_Debug("Color depth=%d",info->vfmt->BitsPerPixel);
-
-	return 0;
+    return 0;
 }
 
 //表面右转90度
@@ -984,7 +985,7 @@ SDL_Surface *RotateSurface(SDL_Surface *src)
 		                      src->format->Rmask,src->format->Gmask,src->format->Bmask,src->format->Amask);
 
 	if(src->format->BitsPerPixel==8){
-		SDL_SetPalette(dest,SDL_LOGPAL,src->format->palette->colors,0,src->format->palette->ncolors);
+		SDL_SetPaletteColors(dest->format->palette,src->format->palette->colors,0,src->format->palette->ncolors);
 	}
     
 	SDL_LockSurface(src);
@@ -1041,7 +1042,13 @@ SDL_Surface *RotateSurface(SDL_Surface *src)
     SDL_UnlockSurface(src);
 	SDL_UnlockSurface(dest);
 
-	SDL_SetColorKey(dest,SDL_SRCCOLORKEY|SDL_RLEACCEL ,src->format->colorkey);
+	{
+		Uint32 key;
+		if(SDL_GetColorKey(src, &key) == 0){
+			SDL_SetColorKey(dest, SDL_TRUE, key);
+			SDL_SetSurfaceRLE(dest, 1);
+		}
+	}
 
 
 	return dest;
