@@ -33,7 +33,3 @@ make
 cd ../bin
 ./jy # run game
 ```
-
-## 已知问题
-
-- macOS Catalina 下动画播放卡顿
