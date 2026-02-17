@@ -1,9 +1,10 @@
- 
+
 
 // SDL 相关函数
 
+#include <unistd.h>
 #include "jymain.h"
- 
+
 static Mix_Music *currentMusic=NULL;         //播放音乐数据，由于同时只播放一个，用一个变量
 
 #define WAVNUM 5
@@ -40,8 +41,8 @@ static int KeyFilter(void *userdata, SDL_Event *event)
 	static int Return_KeyPress=0;
 
 	int r=1;
-	switch(event->type){   
-    case SDL_KEYDOWN:  
+	switch(event->type){
+    case SDL_KEYDOWN:
 		switch(event->key.keysym.sym){
 	    case SDLK_ESCAPE:
 			if(1==Esc_KeyPress){
@@ -86,7 +87,7 @@ static int KeyFilter(void *userdata, SDL_Event *event)
             break;
 		}
         break;
-    default: 
+    default:
         break;
     }
 
@@ -106,21 +107,40 @@ int InitSDL(void)
     }
 
     //atexit(SDL_Quit);    可能有问题，屏蔽掉
- 
+
     JY_Debug("Video Driver: %s\n",SDL_GetCurrentVideoDriver());
 
     InitFont();  //初始化
-    
+
 	r=SDL_InitSubSystem(SDL_INIT_AUDIO);
     if(r<0)
         g_EnableSound=0;
+
+    Mix_Init(MIX_INIT_MID);
 
     r=Mix_OpenAudio(MIX_DEFAULT_FREQUENCY, MIX_DEFAULT_FORMAT, 2, 4096);
 
    if( r < 0 ) {
         JY_Error(
-                "Couldn't initialize SDL_Mixer: %s\n", SDL_GetError());
+                "Couldn't initialize SDL_Mixer: %s\n", Mix_GetError());
         g_EnableSound=0;
+    }
+
+    // FluidSynth MIDI backend requires a SoundFont (.sf2) file.
+    // Try common install locations; SDL_SOUNDFONTS env var overrides all.
+    if(!Mix_GetSoundFonts()){
+        const char *sf2_paths[] = {
+            "/opt/homebrew/share/fluid-synth/sf2/VintageDreamsWaves-v2.sf2",
+            "/usr/share/sounds/sf2/FluidR3_GM.sf2",
+            "/usr/share/soundfonts/FluidR3_GM.sf2",
+            NULL
+        };
+        int k;
+        for(k=0; sf2_paths[k]; k++){
+            FILE *fp=fopen(sf2_paths[k],"rb");
+            if(fp){ fclose(fp); Mix_SetSoundFonts(sf2_paths[k]); break; }
+        }
+        JY_Debug("SoundFont: %s", Mix_GetSoundFonts() ? Mix_GetSoundFonts() : "none found");
     }
 
 	currentWav=0;
@@ -150,6 +170,7 @@ int ExitSDL(void)
 	}
 
 	Mix_CloseAudio();
+    Mix_Quit();
 
     JY_LoadPicture("",0,0);    // 释放可能加载的图片表面
     if(g_Window){
@@ -164,7 +185,7 @@ int ExitSDL(void)
 Uint32 ConvertColor(Uint32 color){
    Uint8 *p=(Uint8*)&color;
    return SDL_MapRGB(g_Surface->format,*(p+2),*(p+1),*p);
-}    
+}
 
 
 // 初始化游戏数据
@@ -201,7 +222,7 @@ int InitGame(void)
     }
 
     Init_Cache();
-	
+
     JY_PicInit("");        // 初始化贴图cache
 
     return 0;
@@ -215,7 +236,7 @@ int ExitGame(void)
 {
 
     JY_PicInit("");
-    
+
     JY_LoadPicture("",0,0);
 
     JY_UnloadMMap();     //释放主地图内存
@@ -234,10 +255,10 @@ int ExitGame(void)
 //加载图形文件，其他格式也可以加载
 //x,y =-1 则加载到屏幕中心
 //    如果未加载，则加载，然后blit，如果加载，直接blit
-//  str 文件名，如果为空，则释放表面        
+//  str 文件名，如果为空，则释放表面
 int JY_LoadPicture(const char* str,int x,int y)
 {
-    static char filename[255]="\0";   		
+    static char filename[255]="\0";
 	static SDL_Surface *pic=NULL;
 
 	SDL_Surface *tmppic;
@@ -250,7 +271,7 @@ int JY_LoadPicture(const char* str,int x,int y)
         }
 		return 0;
 	}
-	
+
     if(strcmp(str,filename)!=0){ // 与以前文件名不同，则释放原来表面，加载新表面
         if(pic){
 		    SDL_FreeSurface(pic);
@@ -322,7 +343,7 @@ int JY_Delay(int x)
 }
 
 
-// 缓慢显示图形 
+// 缓慢显示图形
 // delaytime 每次渐变延时毫秒数
 // Flag=0 从暗到亮，1，从亮到暗
 int JY_ShowSlow(int delaytime,int Flag)
@@ -332,7 +353,7 @@ int JY_ShowSlow(int delaytime,int Flag)
 	int t1,t2;
 	int alpha;
 
- 
+
     SDL_Surface* lps1;  // 建立临时表面
 	lps1=SDL_CreateRGBSurface(SDL_SWSURFACE,g_Surface->w,g_Surface->h,g_Surface->format->BitsPerPixel,
 		                      g_Surface->format->Rmask,g_Surface->format->Gmask,g_Surface->format->Bmask,0);
@@ -352,18 +373,18 @@ int JY_ShowSlow(int delaytime,int Flag)
 			step=32-i;
 
         t1=(int)JY_GetTime();
- 
+
         SDL_FillRect(g_Surface,NULL,0);          //当前表面变黑
 
         alpha=step<<3;
-		if(alpha>255) 
+		if(alpha>255)
 			alpha=255;
 
         SDL_SetSurfaceBlendMode(lps1, SDL_BLENDMODE_BLEND);
         SDL_SetSurfaceAlphaMod(lps1,(Uint8)alpha);  //设置alpha
 
 
-		SDL_BlitSurface(lps1 ,NULL,g_Surface,NULL); 
+		SDL_BlitSurface(lps1 ,NULL,g_Surface,NULL);
 
         JY_ShowSurface(0);
 
@@ -374,7 +395,7 @@ int JY_ShowSlow(int delaytime,int Flag)
 	}
 
     SDL_FreeSurface(lps1);       //释放表面
- 
+
 	return 0;
 }
 
@@ -385,14 +406,14 @@ __int64 GetCycleCount()
 {
 __asm _emit 0x0F
 __asm _emit 0x31
-} 
+}
 
 #endif
 
 //得到当前时间，单位毫秒
 double JY_GetTime()
 {
-#ifdef HIGH_PRECISION_CLOCK    
+#ifdef HIGH_PRECISION_CLOCK
     return (double)(GetCycleCount())/(1000*CPU_FREQUENCY);
 #else
     return (double) SDL_GetTicks();
@@ -402,7 +423,7 @@ double JY_GetTime()
 
 
 
- 
+
 //播放音乐
 int JY_PlayMIDI(const char *filename)
 {
@@ -416,16 +437,16 @@ int JY_PlayMIDI(const char *filename)
         strcpy(currentfile,filename);
 		return 0;
 	}
-	
+
 	if(strcmp(currentfile,filename)==0) //与当前播放文件相同，直接返回
 		return 0;
 
     StopMIDI();
-	
+
 	currentMusic=Mix_LoadMUS(filename);
 
 	if(currentMusic==NULL){
-		JY_Error("Open music file %s failed!",filename);
+		JY_Error("Open music file %s failed: %s",filename, Mix_GetError());
 		return 1;
 	}
 
@@ -453,9 +474,9 @@ int StopMIDI()
 //播放音效
 int JY_PlayWAV(const char *filename)
 {
-	
+
     if(g_EnableSound==0)
-		return 1;    
+		return 1;
 
 	if(WavChunk[currentWav]){          //释放当前音效
         Mix_FreeChunk(WavChunk[currentWav]);
@@ -497,7 +518,7 @@ int JY_GetKey()
         default:
             break;
         }
-	}	
+	}
 	return keyPress;
 }
 
@@ -568,7 +589,7 @@ int JY_DrawRect(int x1,int y1,int x2,int y2,int color)
 	rect1.y=(Sint16)ymin;
 	rect1.w=(Uint16)(xmax-xmin+1);
 	rect1.h=(Uint16)(ymax-ymin+1);
- 
+
     SDL_LockSurface(g_Surface);
     p=g_Surface->pixels;
 	lpitch=g_Surface->pitch;
@@ -589,11 +610,11 @@ int JY_DrawRect(int x1,int y1,int x2,int y2,int color)
 
 	HLine32(x1,x2,y1,c,p,lpitch);
 	HLine32(x1,x2,y2,c,p,lpitch);
- 	VLine32(y1,y2,x1,c,p,lpitch); 
-  	VLine32(y1,y2,x2,c,p,lpitch); 
- 
+ 	VLine32(y1,y2,x1,c,p,lpitch);
+  	VLine32(y1,y2,x2,c,p,lpitch);
+
     SDL_UnlockSurface(g_Surface);
- 
+
 	return 0;
 }
 
@@ -601,8 +622,8 @@ int JY_DrawRect(int x1,int y1,int x2,int y2,int color)
 //绘水平线
 void HLine32(int x1,int x2,int y,int color, unsigned char *vbuffer, int lpitch)
 {
- 
-    int temp; 
+
+    int temp;
     int i;
     int max_x,max_y,min_x,min_y;
     Uint8 *vbuffer2;
@@ -618,12 +639,12 @@ void HLine32(int x1,int x2,int y,int color, unsigned char *vbuffer, int lpitch)
 
     if (y > max_y || y < min_y)
         return;
- 
+
     if (x1>x2){
        temp = x1;
        x1   = x2;
        x2   = temp;
-    } 
+    }
 
     if (x1 > max_x || x2 < min_x)
         return;
@@ -631,7 +652,7 @@ void HLine32(int x1,int x2,int y,int color, unsigned char *vbuffer, int lpitch)
     x1 = ((x1 < min_x) ? min_x : x1);
     x2 = ((x2 > max_x) ? max_x : x2);
 
- 
+
     vbuffer2=vbuffer+y*lpitch+x1*bpp;
 	switch(bpp){
 	case 2:        //16位色彩
@@ -639,7 +660,7 @@ void HLine32(int x1,int x2,int y,int color, unsigned char *vbuffer, int lpitch)
 			*(Uint16*)vbuffer2=(Uint16)color;
 			vbuffer2+=2;
 		}
-        break; 
+        break;
 	case 3:        //24位色彩
 		for(i=0;i<=x2-x1;i++){
 			Uint8 *p=(Uint8*)(&color);
@@ -648,21 +669,21 @@ void HLine32(int x1,int x2,int y,int color, unsigned char *vbuffer, int lpitch)
 			*(vbuffer2+2)=*(p+2);
 			vbuffer2+=3;
 		}
-        break; 
+        break;
 	case 4:        //32位色彩
 		for(i=0;i<=x2-x1;i++){
 			*(Uint32*)vbuffer2=(Uint32)color;
 			vbuffer2+=4;
 		}
-        break; 
+        break;
     }
-}  
+}
 
 //绘垂直线
 void VLine32(int y1,int y2,int x,int color, unsigned char *vbuffer, int lpitch)
 {
- 
-    int temp; 
+
+    int temp;
     int i;
     int max_x,max_y,min_x,min_y;
     Uint8 *vbuffer2;
@@ -678,12 +699,12 @@ void VLine32(int y1,int y2,int x,int color, unsigned char *vbuffer, int lpitch)
 
     if (x > max_x || x < min_x)
         return;
- 
+
     if (y1>y2){
        temp = y1;
        y1   = y2;
        y2   = temp;
-    } 
+    }
 
     if (y1 > max_y || y2 < min_y)
         return;
@@ -698,7 +719,7 @@ void VLine32(int y1,int y2,int x,int color, unsigned char *vbuffer, int lpitch)
 			*(Uint16*)vbuffer2=(Uint16)color;
 			vbuffer2+=lpitch;
 		}
-        break; 
+        break;
 	case 3:
 		for(i=0;i<=y2-y1;i++){
 			Uint8 *p=(Uint8*)(&color);
@@ -708,16 +729,16 @@ void VLine32(int y1,int y2,int x,int color, unsigned char *vbuffer, int lpitch)
 
 			vbuffer2+=lpitch;
 		}
-        break; 
+        break;
 	case 4:
 		for(i=0;i<=y2-y1;i++){
 			*(Uint32*)vbuffer2=(Uint32)color;
 			vbuffer2+=lpitch;
 		}
-        break; 
+        break;
     }
 
-}  
+}
 
 
 
@@ -729,7 +750,7 @@ int JY_FillColor(int x1,int y1,int x2,int y2,int color)
 	int c=ConvertColor(color);
 
     SDL_Rect rect;
-   
+
 	if(x1==0 && y1==0 && x2==0 && y2==0){
         SDL_FillRect(g_Surface,NULL,c);
 	}
@@ -811,7 +832,7 @@ int BlitSurface(SDL_Surface* lps, int x, int y ,int flag,int value)
                 for(j=0;j<tmps->h;j++){
                     Uint8 *p=(Uint8*)tmps->pixels+j*tmps->pitch;
                     for(i=0;i<tmps->w;i++){
-                        if((*p!=*(Uint8*)&color) &&  
+                        if((*p!=*(Uint8*)&color) &&
                             (*(p+1) != *((Uint8*)&color+1)) &&
                             (*(p+2) != *((Uint8*)&color+2)) ){
                             if(flag &0x4){
@@ -846,23 +867,23 @@ int BlitSurface(SDL_Surface* lps, int x, int y ,int flag,int value)
             SDL_SetSurfaceAlphaMod(lps,(Uint8)value);
 
 	        SDL_BlitSurface(lps,NULL,g_Surface,&rect);
- 
+
         }
 	}
-	
+
 	return 0;
 }
 
 
 // 背景变暗
 // 把源表面(x1,y1,x2,y2)矩形内的所有点亮度降低
-// bright 亮度等级 0-256 
+// bright 亮度等级 0-256
 int JY_Background(int x1,int y1,int x2,int y2,int Bright)
 {
-    SDL_Surface* lps1; 
-    SDL_Rect r1,r2; 
+    SDL_Surface* lps1;
+    SDL_Rect r1,r2;
 
-	if(x2<=x1 || y2<=y1) 
+	if(x2<=x1 || y2<=y1)
 		return 0;
 
     Bright=256-Bright;
@@ -886,13 +907,13 @@ int JY_Background(int x1,int y1,int x2,int y2,int Bright)
 		                      g_Surface->format->Rmask,g_Surface->format->Gmask,g_Surface->format->Bmask,0);
 
 
- 
+
     SDL_FillRect(lps1,NULL,0);
 
     SDL_SetSurfaceBlendMode(lps1, SDL_BLENDMODE_BLEND);
     SDL_SetSurfaceAlphaMod(lps1,(Uint8)Bright);
 
-	SDL_BlitSurface(lps1,NULL,g_Surface,&r2); 
+	SDL_BlitSurface(lps1,NULL,g_Surface,&r2);
 
 	SDL_FreeSurface(lps1);
 	return 1;
@@ -907,18 +928,18 @@ int JY_PlayMPEG(const char* filename,int esckey)
      SMPEG_Info mpg_info;
      SMPEG* mpg = NULL;
 	 char *err;
- 
+
      mpg=SMPEG_new(filename,&mpg_info,0);
-  
+
 	 err=SMPEG_error(mpg);
 	 if(err!=NULL){
 		 JY_Error("Open file %s error: %s\n",filename,err);
 		 return 1;
 	 }
-     
+
 
      SMPEG_setdisplay(mpg,g_Surface,NULL,NULL);
- 
+
 	 /* Play the movie, using SDL_mixer for audio */
 	 SMPEG_enableaudio(mpg, 0);
 	 if (g_EnableSound==1) {
@@ -939,7 +960,7 @@ int JY_PlayMPEG(const char* filename,int esckey)
 	}
 
      SMPEG_play(mpg);
-  
+
      while( (SMPEG_status(mpg) == SMPEG_PLAYING)){
 	     int key=JY_GetKey();
 		 if(key==esckey){
@@ -947,14 +968,14 @@ int JY_PlayMPEG(const char* filename,int esckey)
 		 }
          SDL_Delay(500);
 	 }
- 
+
     SMPEG_stop(mpg);
     SMPEG_delete(mpg);
     Mix_HookMusic(NULL, NULL);
 #endif
 
 	return 0;
-} 
+}
 
 
 // 全屏切换
@@ -977,7 +998,7 @@ int JY_FullScreen()
 //表面右转90度
 SDL_Surface *RotateSurface(SDL_Surface *src)
 {
-    SDL_Surface *dest;    
+    SDL_Surface *dest;
 	int i,j;
 
 
@@ -987,7 +1008,7 @@ SDL_Surface *RotateSurface(SDL_Surface *src)
 	if(src->format->BitsPerPixel==8){
 		SDL_SetPaletteColors(dest->format->palette,src->format->palette->colors,0,src->format->palette->ncolors);
 	}
-    
+
 	SDL_LockSurface(src);
 	SDL_LockSurface(dest);
 
@@ -1052,7 +1073,7 @@ SDL_Surface *RotateSurface(SDL_Surface *src)
 
 
 	return dest;
-    
+
 }
 
 //矩形右转90度
@@ -1070,7 +1091,7 @@ SDL_Rect RotateRect(const SDL_Rect *rect)
 SDL_Rect RotateReverseRect(const SDL_Rect *rect)
 {
     SDL_Rect r;
-	r.x=rect->y; 
+	r.x=rect->y;
 	r.y=(Sint16)(g_ScreenH-rect->x-rect->w);
 	r.w=rect->h;
 	r.h=rect->w;
